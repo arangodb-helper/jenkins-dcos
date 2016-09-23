@@ -16,7 +16,7 @@ ENV JENKINS_FOLDER /usr/share/jenkins/
 ENV JAVA_HOME "/usr/lib/jvm/java-7-openjdk-amd64"
 
 RUN apt-get update
-RUN apt-get install -y git python zip curl default-jre jq gradle ant maven
+RUN apt-get install -y git python zip curl default-jre jq gradle ant maven wget
 
 RUN mkdir -p /var/log/nginx/jenkins
 COPY conf/nginx/nginx.conf /etc/nginx/nginx.conf
@@ -24,15 +24,20 @@ COPY conf/nginx/nginx.conf /etc/nginx/nginx.conf
 RUN mkdir -p $JENKINS_HOME
 RUN mkdir -p ${JENKINS_FOLDER}/war
 
-COPY target/jenkins-*.war ${JENKINS_FOLDER}/jenkins.war
+# COPY target/jenkins-*.war ${JENKINS_FOLDER}/jenkins.war
+RUN cd ${JENKINS_FOLDER}; wget https://updates.jenkins-ci.org/latest/jenkins.war
 COPY scripts/bootstrap.py /usr/local/jenkins/bin/bootstrap.py
+COPY scripts/jenkins-dl.sh /usr/local/jenkins/bin/jenkins-dl.sh
 
 COPY conf/jenkins/config.xml "${JENKINS_STAGING}/config.xml"
 COPY conf/jenkins/jenkins.model.JenkinsLocationConfiguration.xml "${JENKINS_STAGING}/jenkins.model.JenkinsLocationConfiguration.xml"
 COPY conf/jenkins/nodeMonitors.xml "${JENKINS_STAGING}/nodeMonitors.xml"
+COPY conf/pluginlist.txt "${JENKINS_STAGING}/pluginlist.txt"
 
 # Override the default property for DNS lookup caching
 RUN echo 'networkaddress.cache.ttl=60' >> ${JAVA_HOME}/jre/lib/security/java.security
+
+RUN /usr/local/jenkins/bin/jenkins-dl.sh
 
 CMD /usr/local/jenkins/bin/bootstrap.py && nginx && \
 java ${JVM_OPTS}                                    \
